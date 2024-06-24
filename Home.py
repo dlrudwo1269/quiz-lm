@@ -1,14 +1,14 @@
 # run command: streamlit run Home.py
-import requests
 import streamlit as st
 from langchain_community.chat_models import ChatOllama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from pages.prompts.flashcard_prompts import *
 
 PROMPT_OPTIONS = {
-    "Zero-shot": "text1",
-    "Few-shot": "text2",
-    "Chain of thought": "text3",
+    "Zero-shot": zeroshot_prompt,
+    "Few-shot": fewshot_prompt,
+    "Chain of thought": chain_of_thought_prompt,
     "Summarize then Generate": "text4"
 }
 
@@ -19,24 +19,18 @@ st.set_page_config(
     page_icon = "🤖"
 )
 
-def llama3(data):
-    prompt = ChatPromptTemplate.from_template(
-        """Create {num_cards} flashcards from the following text, enclosed in triple quotes:
-        ```
-        {text}
-        ```
-        """
-    )
+def llama3(data, prompt_option):
+    prompt = ChatPromptTemplate.from_template(PROMPT_OPTIONS[prompt_option])
     chain = prompt | llm | StrOutputParser()
     return chain.invoke(data)
 
 
-def process_input(text, num_cards):
+def process_input(context, num_cards, prompt_option):
     data = {
-        "text": text,
+        "context": context,
         "num_cards": num_cards
     }
-    return llama3(data)
+    return llama3(data, prompt_option)
 
 
 with st.form(key='source_text'):
@@ -52,5 +46,5 @@ with st.form(key='source_text'):
 
 
 if submit_button:
-    result = process_input(user_input, num_cards, PROMPT_OPTIONS[prompt_option]) 
+    result = process_input(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
     st.write("Result:", result)

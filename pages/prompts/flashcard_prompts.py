@@ -83,8 +83,3 @@ chain_of_thought_prompt = """
     Answer: Photosynthesis
 
 """ + format_instruction
-
-
-
-
-
