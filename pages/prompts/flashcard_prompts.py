@@ -84,7 +84,6 @@ chain_of_thought_prompt = """
 
 """ + format_instruction
 
-
 # Analogy-Based Prompt
 analogy_based_prompt = """
     Create {num_cards} flashcards from the following text enclosed in triple backticks (```):
