@@ -6,10 +6,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from pages.prompts.flashcard_prompts import *
 
 PROMPT_OPTIONS = {
-    "Zero-shot": zeroshot_prompt,
-    "Few-shot": fewshot_prompt,
-    "Chain of thought": chain_of_thought_prompt,
-    "Summarize then Generate": "text4"
+    "Zero-Shot": zeroshot_prompt,
+    "Few-Shot": fewshot_prompt,
+    "Chain-of-thought": chain_of_thought_prompt,
+    "Analogy-Based": analogy_based_prompt,
+    # "Summarize then Generate": "text4",
 }
 
 llm = ChatOllama(model="llama3")
@@ -19,6 +20,7 @@ st.set_page_config(
     page_icon = "🤖"
 )
 
+@st.cache_data(show_spinner="Making flashcards...")
 def llama3(data, prompt_option):
     prompt = ChatPromptTemplate.from_template(PROMPT_OPTIONS[prompt_option])
     chain = prompt | llm | StrOutputParser()
@@ -36,7 +38,7 @@ def process_input(context, num_cards, prompt_option):
 with st.form(key='source_text'):
     user_input = st.text_area(label="Input text to create flashcards from")
     num_cards = st.number_input(
-        label="How many cards do you want to generate?", min_value=0, max_value=999,
+        label="How many cards do you want to generate?", min_value=1, max_value=999,
     )
     prompt_option = st.selectbox(
          "Select prompt option:",
@@ -46,5 +48,8 @@ with st.form(key='source_text'):
 
 
 if submit_button:
-    result = process_input(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
-    st.write("Result:", result)
+    if user_input:
+        result = process_input(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
+        st.write("Result:", result.replace("$", "\$"))
+    else:
+        st.error("Please provide context to generate flashcards.")
