@@ -1,28 +1,38 @@
 # run command: streamlit run Home.py
-import streamlit as st
-
 import requests
+import streamlit as st
+from langchain_community.chat_models import ChatOllama
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
-url = "http://localhost:11435/api/chat"
 
-def llama3(prompt):
-    data = {
-        "model": "llama3",
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "stream": False
-    }
+llm = ChatOllama(model="llama3")
 
-    headers = {
-        "Content-Type": "application/json"
-    }
+def llama3(text):
+    prompt = ChatPromptTemplate.from_template("Tell me a short joke about {text}")
+    chain = prompt | llm | StrOutputParser()
+    return chain.invoke({"text": text})
 
-    response = requests.post(url, headers=headers, json=data)
-    return response.json()["message"]["content"]
+# url = "http://localhost:11435/api/chat"
+
+# def llama3(prompt):
+#     data = {
+#         "model": "llama3",
+#         "messages": [
+#             {
+#                 "role": "user",
+#                 "content": prompt
+#             }
+#         ],
+#         "stream": False
+#     }
+
+#     headers = {
+#         "Content-Type": "application/json"
+#     }
+
+#     response = requests.post(url, headers=headers, json=data)
+#     return response.json()["message"]["content"]
 
 st.set_page_config(
     page_title = "QuizLM",
