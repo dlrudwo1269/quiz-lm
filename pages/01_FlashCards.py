@@ -26,6 +26,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+tab1, tab2 = st.tabs(["Pasting Text Input", "Upload File"])
+
 
 @st.cache_data(show_spinner="Making flashcards...")
 def llama3(data, prompt_option):
@@ -42,24 +44,34 @@ def process_input(context, num_cards, prompt_option):
     return llama3(data, prompt_option)
 
 
-with st.form(key='source_text'):
-    user_input = st.text_area(
-        label="Input text to create flashcards from:"
-    )
-    num_cards = st.number_input(
-        label="How many cards do you want to generate?", min_value=1, max_value=999,
-    )
-    prompt_option = st.selectbox(
-         "Select prompt option:",
-        tuple(PROMPT_OPTIONS.keys()),
-    )
-    submit_button = st.form_submit_button(label='Submit')
+with tab1:
+    with st.form(key='pasting_text'):
+        user_input = st.text_area(
+            label="Input text to create flashcards from:"
+        )
+        num_cards = st.number_input(
+            label="How many cards do you want to generate?", min_value=1, max_value=999,
+        )
+        prompt_option = st.selectbox(
+            "Select prompt option:",
+            tuple(PROMPT_OPTIONS.keys()),
+        )
+        submit_button = st.form_submit_button(label='Submit')
 
-
-if submit_button:
-    if user_input and len(user_input) > 30:
-        result = process_input(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
-        st.write("Result:", result.replace("$", "\$"))
-    else:
-        st.error("Please provide enough context to generate flashcards.")
+    if submit_button:
+        if user_input and len(user_input) > 30:
+            result = process_input(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
+            st.write("Result:", result.replace("$", "\$"))
+        else:
+            st.error("Please provide enough context to generate flashcards.")
+        
+with tab2:
+    with st.form(key='file_text'):
+        file = st.file_uploader(
+                "Upload a .docx , .txt or .pdf file",
+                type=["pdf", "txt", "docx"],
+            )
+        if file:
+            pass
+            # docs = split_file(file)
         

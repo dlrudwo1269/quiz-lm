@@ -1,6 +1,8 @@
 # Prompt used for formatting Question & Answer output format
 format_instruction = """
 
+    If the provided context lacks sufficient information to create {num_cards} distinct flashcards, do not generate any flashcards. Instead, respond that the context given is insufficient.
+
     Now, generate the flashcards based on the given text in the following format:
 
     Question 1: [Question 1]
