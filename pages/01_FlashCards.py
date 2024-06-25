@@ -1,8 +1,17 @@
+import json
 import streamlit as st
 from langchain_community.chat_models import ChatOllama
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate
 from pages.prompts.flashcard_prompts import *
+from langchain.chat_models import ChatOpenAI
+
+models = ["gpt-3.5-turbo-1106", "gpt-4o", "llama3"]
+# Disable Llama3 for production
+
+# Page Setup
+st.set_page_config(page_title = "FlashCard Generator", page_icon = "🗂️")
+st.markdown("""# FlashCard Generator""", unsafe_allow_html=True)
+tab1, tab2 = st.tabs(["Pasting Text Input", "Upload File"])
 
 PROMPT_OPTIONS = {
     "Zero-Shot": zeroshot_prompt,
@@ -11,29 +20,41 @@ PROMPT_OPTIONS = {
     "Analogy-Based": analogy_based_prompt,
 }
 
-llm = ChatOllama(model="llama3")
+with st.sidebar:
+    model = st.sidebar.selectbox(
+        "Which model would you like to use?",
+        models,
+        index = 0
+    )
 
-st.set_page_config(
-    page_title = "FlashCard Generator",
-    page_icon = "🗂️"
-)
-
-
-st.markdown(
-    """
-# FlashCard Generator
-""",
-    unsafe_allow_html=True
-)
-
-tab1, tab2 = st.tabs(["Pasting Text Input", "Upload File"])
+    api_key = st.text_input(
+        "Enter your OpenAI API key:",
+        placeholder="sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        value= ""
+    )
 
 
 @st.cache_data(show_spinner="Making flashcards...")
 def llama3(data, prompt_option):
-    prompt = ChatPromptTemplate.from_template(PROMPT_OPTIONS[prompt_option])
-    chain = prompt | llm | StrOutputParser()
-    return chain.invoke(data)
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system", PROMPT_OPTIONS[prompt_option],
+            )
+        ]
+    )
+    if model[:3] == 'gpt':
+        llm = ChatOpenAI(
+            temperature=0.1, 
+            model_name="gpt-3.5-turbo-1106",
+            streaming=True,
+            api_key=api_key,
+        )
+    else:
+        llm = ChatOllama(model="llama3")
+
+    chain = prompt | llm
+    return chain.invoke(data).content
 
 
 def process_input(context, num_cards, prompt_option):
