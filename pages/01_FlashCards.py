@@ -4,26 +4,39 @@ import socket
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_community.chat_models import ChatOllama
-from langchain.prompts import ChatPromptTemplate
+
 from pages.prompts.flashcard_prompts import *
 from langchain.chat_models import ChatOpenAI
+from langchain_core.output_parsers import StrOutputParser
 
+# Load env variables
 load_dotenv()
 
+models = ["gpt-3.5-turbo-1106", "gpt-4o"]
+
+# DEV
 try:
     environment = os.getenv('ENVIRONMENT')
+
+# PROD
 except:
     environment = "production"
-
-models = ["gpt-3.5-turbo-1106", "gpt-4o"]
 
 if environment == "development":
     models.append("llama3")
 
 # Page Setup
 st.set_page_config(page_title = "FlashCard Generator", page_icon = "🗂️")
-st.markdown("""# FlashCard Generator""", unsafe_allow_html=True)
+st.markdown("""# FlashCard Generator""", unsafe_allow_html = True)
 tab1, tab2 = st.tabs(["Pasting Text Input", "Upload File"])
+
+# CSS
+current_dir = os.path.dirname(__file__)
+css_file_flashcard = 'styles/01_FlashCards.css'
+css_file_path = os.path.join(current_dir, css_file_flashcard)
+with open(css_file_path, 'r') as file:
+    card_css = "<style>" + file.read() + "</style>"
+st.markdown(card_css, unsafe_allow_html=True)
 
 PROMPT_OPTIONS = {
     "Zero-Shot": zeroshot_prompt,
@@ -48,35 +61,23 @@ with st.sidebar:
 
 
 @st.cache_data(show_spinner="Making flashcards...")
-def generate(data, prompt_option):
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system", PROMPT_OPTIONS[prompt_option],
-            )
-        ]
-    )
+def generate(context, num_cards, prompt_option):
+
+    # GPT Models
     if model[:3] == 'gpt':
-        llm = ChatOpenAI(
-            temperature=0.5, 
-            model_name=model,
-            streaming=True,
-            api_key=api_key,
-        )
+        from langchain.prompts import ChatPromptTemplate
+        llm = ChatOpenAI(temperature=0.5, model_name=model, streaming=True, api_key=api_key)
+        prompt = ChatPromptTemplate.from_messages([("system", PROMPT_OPTIONS[prompt_option],)])
+        chain = prompt | llm
+        return chain.invoke({"context": context, "num_cards": num_cards}).content
+    
+    # Ollama Model
     else:
+        from langchain_core.prompts import ChatPromptTemplate
         llm = ChatOllama(model="llama3")
-
-
-    chain = prompt | llm
-    return chain.invoke(data).content
-
-
-def process_input(context, num_cards, prompt_option):
-    data = {
-        "context": context,
-        "num_cards": num_cards
-    }
-    return generate(data, prompt_option)
+        prompt = ChatPromptTemplate.from_template(PROMPT_OPTIONS[prompt_option])
+        chain = prompt | llm | StrOutputParser()
+        return chain.invoke({"context": context, "num_cards": num_cards})
 
 
 with tab1:
@@ -95,8 +96,23 @@ with tab1:
 
     if submit_button:
         if user_input and len(user_input) > 30:
-            result = process_input(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
+            result = generate(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
             st.write("Result:", result.replace("$", "\$"))
+            card_html = """
+                <div class="flip-card">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                    <h1>Front Side</h1>
+                    <p>Some text here</p>
+                    </div>
+                    <div class="flip-card-back">
+                    <h1>Back Side</h1>
+                    <p>Some more text here</p>
+                    </div>
+                </div>
+                </div>
+                """
+            st.markdown(card_html, unsafe_allow_html=True)
         else:
             st.error("Please provide enough context to generate flashcards.")
         
