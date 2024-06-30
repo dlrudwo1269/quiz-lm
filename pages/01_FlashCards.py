@@ -113,6 +113,8 @@ with tab1:
                 </div>
                 """
             st.markdown(card_html, unsafe_allow_html=True)
+            result = generate(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
+            st.write("Result:", result.replace("$", r"\$"))
         else:
             st.error("Please provide enough context to generate flashcards.")
         
