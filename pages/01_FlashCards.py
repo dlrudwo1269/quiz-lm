@@ -1,12 +1,24 @@
+import os
 import json
+import socket
 import streamlit as st
+from dotenv import load_dotenv
 from langchain_community.chat_models import ChatOllama
 from langchain.prompts import ChatPromptTemplate
 from pages.prompts.flashcard_prompts import *
 from langchain.chat_models import ChatOpenAI
 
-models = ["gpt-3.5-turbo-1106", "gpt-4o", "llama3"]
-# Disable Llama3 for production
+load_dotenv()
+
+try:
+    environment = os.getenv('ENVIRONMENT')
+except:
+    environment = "production"
+
+models = ["gpt-3.5-turbo-1106", "gpt-4o"]
+
+if environment == "development":
+    models.append("llama3")
 
 # Page Setup
 st.set_page_config(page_title = "FlashCard Generator", page_icon = "🗂️")
@@ -27,15 +39,16 @@ with st.sidebar:
         index = 0
     )
 
-    api_key = st.text_input(
-        "Enter your OpenAI API key:",
-        placeholder="sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        value= ""
-    )
+    if model[:3] == 'gpt':
+        api_key = st.text_input(
+            "Enter your OpenAI API key:",
+            placeholder="sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            value= ""
+        )
 
 
 @st.cache_data(show_spinner="Making flashcards...")
-def llama3(data, prompt_option):
+def generate(data, prompt_option):
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -45,13 +58,14 @@ def llama3(data, prompt_option):
     )
     if model[:3] == 'gpt':
         llm = ChatOpenAI(
-            temperature=0.1, 
-            model_name="gpt-3.5-turbo-1106",
+            temperature=0.5, 
+            model_name=model,
             streaming=True,
             api_key=api_key,
         )
     else:
         llm = ChatOllama(model="llama3")
+
 
     chain = prompt | llm
     return chain.invoke(data).content
@@ -62,7 +76,7 @@ def process_input(context, num_cards, prompt_option):
         "context": context,
         "num_cards": num_cards
     }
-    return llama3(data, prompt_option)
+    return generate(data, prompt_option)
 
 
 with tab1:
@@ -71,7 +85,7 @@ with tab1:
             label="Input text to create flashcards from:"
         )
         num_cards = st.number_input(
-            label="How many cards do you want to generate?", min_value=1, max_value=999,
+            label="How many cards do you want to generate?", min_value=1, max_value=100,
         )
         prompt_option = st.selectbox(
             "Select prompt option:",
@@ -92,7 +106,17 @@ with tab2:
                 "Upload a .docx , .txt or .pdf file",
                 type=["pdf", "txt", "docx"],
             )
-        if file:
-            pass
-            # docs = split_file(file)
+        num_cards = st.number_input(
+            label="How many cards do you want to generate?", min_value=1, max_value=100,
+        )
+        prompt_option = st.selectbox(
+            "Select prompt option:",
+            tuple(PROMPT_OPTIONS.keys()),
+        )
+        submit_button = st.form_submit_button(label='Submit')
+
+        if submit_button:
+            if file:
+                pass
+                # docs = split_file(file)
         
