@@ -96,7 +96,7 @@ with tab1:
     if submit_button:
         if user_input and len(user_input) > 30:
             result = process_input(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
-            st.write("Result:", result.replace("$", "\$"))
+            st.write("Result:", result.replace("$", r"\$"))
         else:
             st.error("Please provide enough context to generate flashcards.")
         
