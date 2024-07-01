@@ -7,7 +7,7 @@ from langchain_community.chat_models import ChatOllama
 
 from pages.prompts.flashcard_prompts import *
 from langchain.chat_models import ChatOpenAI
-from langchain_core.output_parsers import StrOutputParser
+
 
 # Load env variables
 load_dotenv()
@@ -56,7 +56,7 @@ with st.sidebar:
         api_key = st.text_input(
             "Enter your OpenAI API key:",
             placeholder="sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-            value= ""
+            value= "" if environment == "production" else os.getenv('OPENAI_API_KEY')
         )
 
 
@@ -66,20 +66,31 @@ def generate(context, num_cards, prompt_option):
     # GPT Models
     if model[:3] == 'gpt':
         from langchain.prompts import ChatPromptTemplate
+        from langchain.schema import BaseOutputParser
+
         llm = ChatOpenAI(temperature=0.5, model_name=model, streaming=True, api_key=api_key)
-        prompt = ChatPromptTemplate.from_messages([("system", PROMPT_OPTIONS[prompt_option],)])
-        chain = prompt | llm
-        return chain.invoke({"context": context, "num_cards": num_cards}).content
+        flashcard_prompt = ChatPromptTemplate.from_messages([("system", PROMPT_OPTIONS[prompt_option],)])
+        formatting_prompt = ChatPromptTemplate.from_messages([("system", json_output_prompt,)])
+        flashcard_chain = flashcard_prompt | llm
+        formatting_chain = formatting_prompt | llm
+        
+        class JsonOutputParser(BaseOutputParser):
+            def parse(self, text):
+                text = text.replace("```", "").replace("json", "")
+                return json.loads(text)
+
+        chain = {"questions": flashcard_chain} | formatting_chain | JsonOutputParser()
+        return chain.invoke({"context": context, "num_cards": num_cards})
     
     # Ollama Model
     else:
         from langchain_core.prompts import ChatPromptTemplate
+        from langchain_core.output_parsers import StrOutputParser
         llm = ChatOllama(model="llama3")
         prompt = ChatPromptTemplate.from_template(PROMPT_OPTIONS[prompt_option])
         chain = prompt | llm | StrOutputParser()
         return chain.invoke({"context": context, "num_cards": num_cards})
-
-
+    
 with tab1:
     with st.form(key='pasting_text'):
         user_input = st.text_area(
@@ -96,25 +107,17 @@ with tab1:
 
     if submit_button:
         if user_input and len(user_input) > 30:
-            result = generate(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
-            st.write("Result:", result.replace("$", "\$"))
-            card_html = """
-                <div class="flip-card">
-                <div class="flip-card-inner">
-                    <div class="flip-card-front">
-                    <h1>Front Side</h1>
-                    <p>Some text here</p>
-                    </div>
-                    <div class="flip-card-back">
-                    <h1>Back Side</h1>
-                    <p>Some more text here</p>
-                    </div>
-                </div>
-                </div>
-                """
-            st.markdown(card_html, unsafe_allow_html=True)
-            result = generate(context=user_input, num_cards=num_cards, prompt_option=prompt_option) 
-            st.write("Result:", result.replace("$", r"\$"))
+            result = generate(context=user_input, num_cards=num_cards, prompt_option=prompt_option)
+            
+            if model[:3] == 'gpt':
+                for q in result["questions"]:
+                    question, answer = q["question"], q["answer"]
+                    st.write("Question:", question)
+                    st.write("Answer:", answer)
+                    st.write("---")
+            else:
+                st.write(result)
+            
         else:
             st.error("Please provide enough context to generate flashcards.")
         
