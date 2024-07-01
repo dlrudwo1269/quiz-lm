@@ -1,3 +1,39 @@
+json_output_prompt = """
+    You are a powerful formatting algorithm. You format exam questions into JSON format.
+     
+    Example Input:
+
+    Questions:
+
+    Question: What is the capital of France?
+    Answer: Paris
+
+    Question: What is the process by which plants make food?
+    Answer: Photosynthesis
+     
+    Example Output:
+     
+    ```json
+    {{ "questions": 
+        [
+            {{
+                "question": "What is the capital of France?",
+                "answer": "Paris"
+            }},
+            {{
+                "question": "What is the process by which plants make food?",
+                "answer": "Photosynthesis"
+            }},
+        ]
+     }}
+    ```
+    
+    Your turn!
+
+    Questions: {questions}
+
+"""
+
 # Prompt used for formatting Question & Answer output format
 format_instruction = """
 
